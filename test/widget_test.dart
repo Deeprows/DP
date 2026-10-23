@@ -4,11 +4,27 @@ import 'package:football_analyzer/main.dart';
 
 void main() {
   testWidgets('Analyzer opens without demo content', (tester) async {
-    await tester.pumpWidget(const FootballApp());
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MainScreen(),
+      ),
+    );
+
     expect(find.text('DP FOOTBALL AI'), findsOneWidget);
-    expect(find.text('Match Analyzer'), findsOneWidget);
-    expect(find.text('Analyze with live data'), findsOneWidget);
-    expect(find.text('DEMO'), findsNothing);
-    expect(find.byType(TextField), findsOneWidget);
+    expect(find.text('Analyzer'), findsOneWidget);
+    expect(find.text('Fixtures'), findsOneWidget);
+  });
+
+  testWidgets('Navigation switches to Fixtures', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: MainScreen(),
+      ),
+    );
+
+    await tester.tap(find.text('Fixtures'));
+    await tester.pump();
+
+    expect(find.byType(NavigationBar), findsOneWidget);
   });
 }

@@ -1,0 +1,127 @@
+{
+  "project_info": {
+    "project_number": "227439941748",
+    "firebase_url": "https://deeprows-4d37c-default-rtdb.firebaseio.com",
+    "project_id": "deeprows-4d37c",
+    "storage_bucket": "deeprows-4d37c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227439941748:android:e9738b9a9f0f9fc5279921",
+        "android_client_info": {
+          "package_name": "com.damimovies.damimovies"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwftUItzTbBtX9iTp79_1FYFA-jHvsKK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227439941748:android:f647eb83ee4b7e64279921",
+        "android_client_info": {
+          "package_name": "com.deeprows.footbolive"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwftUItzTbBtX9iTp79_1FYFA-jHvsKK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227439941748:android:508191162ca0611c279921",
+        "android_client_info": {
+          "package_name": "com.deeprowss.dpfootballai"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwftUItzTbBtX9iTp79_1FYFA-jHvsKK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:227439941748:android:fa62476d3f4a25f9279921",
+        "android_client_info": {
+          "package_name": "com.example.football_analyzer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwftUItzTbBtX9iTp79_1FYFA-jHvsKK4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "227439941748-dqcen8jgapsbr7h4ddfl0aooiic5368t.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

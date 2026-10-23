@@ -82,7 +82,9 @@ class _MainScreenState extends State<MainScreen> {
                   } on FirebaseAuthException catch (error) {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(error.message ?? 'Could not sign out.')),
+                      SnackBar(
+                          content:
+                              Text(error.message ?? 'Could not sign out.')),
                     );
                   }
                 }
