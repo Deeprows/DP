@@ -28,9 +28,12 @@ jobs:
         run: flutter analyze
       - name: Test
         run: flutter test
-      - name: Build debug APK
-        run: flutter build apk --debug --dart-define=PREDICTION_API_URL=${{ vars.PREDICTION_API_URL }}
+      - name: Build small release APKs (one per CPU type)
+        run: >
+          flutter build apk --release --split-per-abi
+          --obfuscate --split-debug-info=build/symbols
+          --dart-define=PREDICTION_API_URL=${{ vars.PREDICTION_API_URL }}
       - uses: actions/upload-artifact@v4
         with:
-          name: football-ai-debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          name: football-ai-release-apks
+          path: build/app/outputs/flutter-apk/*-release.apk
