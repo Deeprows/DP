@@ -51,9 +51,11 @@ class _AnalyzerScreenState extends State<AnalyzerScreen> {
   Widget build(BuildContext context) => ListView(
         padding: const EdgeInsets.fromLTRB(16, 14, 16, 32),
         children: [
-          const Text('Match Analyzer', style: TextStyle(fontSize: 25, fontWeight: FontWeight.w800)),
+          const Text('AI Match Analyzer', style: TextStyle(fontSize: 27, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),
-          const Text('Real fixture checks and statistical predictions. No simulated results.', style: AppText.muted),
+          const Text('Analyze upcoming football matches with verified data.', style: AppText.muted),
+          const SizedBox(height: 16),
+          Container(padding: const EdgeInsets.all(16), decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xff3a1b27), AppColors.surface]), borderRadius: BorderRadius.circular(18), border: Border.all(color: AppColors.border)), child: const Row(children: [Icon(Icons.auto_awesome, size: 30, color: AppColors.accent), SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('SMART FOOTBALL INSIGHTS', style: AppText.label), SizedBox(height: 5), Text('Team form • Match analysis • Probabilities', style: AppText.heading), SizedBox(height: 4), Text('Predictions appear only when verified statistics are available.', style: AppText.caption)]))])),
           const SizedBox(height: 18),
           Card(
             child: Padding(
