@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../services/fixtures_service.dart';
-import '../services/prediction_service.dart';
+import '../models/match.dart';
 import '../theme.dart';
 import '../widgets/common.dart';
+import '../widgets/match_card.dart';
 import 'match_detail_screen.dart';
 
 class MatchesScreen extends StatefulWidget {
@@ -13,171 +13,176 @@ class MatchesScreen extends StatefulWidget {
 }
 
 class _MatchesScreenState extends State<MatchesScreen> {
-  late Future<List<LiveFixture>> request;
-  late DateTime chosen;
-  String filter = 'All';
+  late final DateTime today;
+  late final List<Match> all;
+  late final List<DateTime> days;
+  int dayIndex = 1;
   String league = 'All';
 
   @override
   void initState() {
     super.initState();
     final now = DateTime.now();
-    chosen = DateTime(now.year, now.month, now.day);
-    _refresh();
+    today = DateTime(now.year, now.month, now.day);
+    all = demoMatches(now);
+    days = List.generate(
+      7,
+      (i) => DateTime(today.year, today.month, today.day + i - 1),
+    );
   }
 
-  void _refresh() => request = FixturesService.upcoming();
-  bool _sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
-  bool _live(String s) => ['LIVE', 'IN_PLAY', '1H', '2H', 'HT', 'PAUSED'].contains(s.toUpperCase());
-  bool _finished(String s) => ['FT', 'FINISHED', 'FULL_TIME', 'ENDED', 'AET'].contains(s.toUpperCase());
-
   @override
-  Widget build(BuildContext context) => RefreshIndicator(
-    onRefresh: () async {
-      setState(_refresh);
-      try { await request; } catch (_) {}
-    },
-    child: FutureBuilder<List<LiveFixture>>(
-      future: request,
-      builder: (context, snapshot) {
-        final fixtures = snapshot.data ?? <LiveFixture>[];
-        final today = DateTime.now();
-        final days = List.generate(9, (i) => DateTime(today.year, today.month, today.day + i - 2));
-        final onDay = fixtures.where((m) => _sameDay(m.kickoff, chosen)).toList()
-          ..sort((a, b) => a.kickoff.compareTo(b.kickoff));
-        final leagues = ['All', ...{for (final m in onDay) m.competition}];
-        final activeLeague = leagues.contains(league) ? league : 'All';
-        final visible = onDay.where((m) {
-          if (activeLeague != 'All' && m.competition != activeLeague) return false;
-          if (filter == 'Live' && !_live(m.status)) return false;
-          if (filter == 'Upcoming' && (_live(m.status) || _finished(m.status))) return false;
-          if (filter == 'Results' && !_finished(m.status)) return false;
-          return true;
-        }).toList();
-        final groups = <String, List<LiveFixture>>{};
-        for (final match in visible) {
-          groups.putIfAbsent(match.competition, () => []).add(match);
-        }
-        return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 28), children: [
-          const Text('Match centre', style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          const Text('Football fixtures, scores and match insights', style: AppText.muted),
-          const SizedBox(height: 18),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xff331922), AppColors.surface]),
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(children: [
-              const Icon(Icons.sports_soccer, color: AppColors.accent, size: 30),
-              const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('THE FOOTBALL HUB', style: AppText.label),
-                const SizedBox(height: 3),
-                Text(snapshot.hasData ? '${fixtures.length} fixtures from your provider' : 'Your football dashboard', style: AppText.heading),
-                const SizedBox(height: 3),
-                const Text('Pull down to refresh match data', style: AppText.caption),
-              ])),
-              IconButton(tooltip: 'Refresh', onPressed: () => setState(_refresh), icon: const Icon(Icons.refresh_rounded)),
-            ]),
+  Widget build(BuildContext context) {
+    final day = days[dayIndex];
+    final dayMatches = all.where((m) => isSameDay(m.kickoff, day)).toList()
+      ..sort((a, b) => a.kickoff.compareTo(b.kickoff));
+    final leagues = [
+      'All',
+      ...{for (final m in dayMatches) m.league}
+    ];
+    final active = leagues.contains(league) ? league : 'All';
+    final visible = active == 'All'
+        ? dayMatches
+        : dayMatches.where((m) => m.league == active).toList();
+
+    final grouped = <String, List<Match>>{};
+    for (final m in visible) {
+      grouped.putIfAbsent(m.league, () => []).add(m);
+    }
+
+    final children = <Widget>[];
+    grouped.forEach((name, list) {
+      children.add(Padding(
+        padding: EdgeInsets.fromLTRB(2, children.isEmpty ? 4 : 14, 0, 8),
+        child: SectionLabel(name),
+      ));
+      for (final m in list) {
+        children.add(MatchCard(
+          match: m,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => MatchDetailScreen(match: m)),
           ),
-          const SizedBox(height: 18),
-          SizedBox(height: 66, child: ListView.separated(
+        ));
+        children.add(const SizedBox(height: 6));
+      }
+    });
+
+    return Column(
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(16, 4, 16, 10),
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Sample fixtures — live scores are not connected.',
+              style: TextStyle(fontSize: 12, color: AppColors.warning),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 56,
+          child: ListView.separated(
             scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: days.length,
             separatorBuilder: (_, __) => const SizedBox(width: 8),
-            itemBuilder: (_, i) {
-              final day = days[i];
-              final selected = _sameDay(day, chosen);
-              return InkWell(
-                onTap: () => setState(() { chosen = day; league = 'All'; }),
-                borderRadius: BorderRadius.circular(14),
-                child: Container(width: 62, decoration: BoxDecoration(
-                  color: selected ? AppColors.accent : AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: selected ? AppColors.accent : AppColors.border),
-                ), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Text(_sameDay(day, today) ? 'Today' : DateFormat('EEE').format(day), style: TextStyle(fontSize: 11, color: selected ? Colors.white : AppColors.textMuted)),
-                  const SizedBox(height: 3),
-                  Text('${day.day}', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
-                ])),
-              );
-            },
-          )),
-          const SizedBox(height: 16),
-          Wrap(spacing: 8, runSpacing: 8, children: ['All', 'Live', 'Upcoming', 'Results'].map((item) => ChoiceChip(
-            label: Text(item), selected: filter == item,
-            onSelected: (_) => setState(() => filter = item),
-            selectedColor: AppColors.accentSoft,
-            side: BorderSide(color: filter == item ? AppColors.accent : AppColors.border),
-          )).toList()),
-          if (leagues.length > 1) ...[
-            const SizedBox(height: 8),
-            SizedBox(height: 44, child: ListView.separated(
+            itemBuilder: (_, i) => _dayChip(i),
+          ),
+        ),
+        if (leagues.length > 2)
+          SizedBox(
+            height: 44,
+            child: ListView.separated(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
               itemCount: leagues.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 7),
-              itemBuilder: (_, i) => ChoiceChip(
-                label: Text(leagues[i]), selected: activeLeague == leagues[i],
-                onSelected: (_) => setState(() => league = leagues[i]),
-                selectedColor: AppColors.accentSoft,
-              ),
-            )),
-          ],
-          const SizedBox(height: 18),
-          if (snapshot.connectionState != ConnectionState.done)
-            const Padding(padding: EdgeInsets.symmetric(vertical: 64), child: Center(child: CircularProgressIndicator()))
-          else if (snapshot.hasError) ...[
-            InfoBanner(text: PredictionService.endpoint.trim().isEmpty ? 'Live football data is not connected yet. Add PREDICTION_API_URL to your GitHub Actions configuration when your provider is ready.' : 'Could not reach the football provider. Check your internet connection or API configuration.'),
-            const SizedBox(height: 12),
-            OutlinedButton.icon(onPressed: () => setState(_refresh), icon: const Icon(Icons.refresh), label: const Text('Try again')),
-          ] else if (visible.isEmpty)
-            Padding(padding: const EdgeInsets.symmetric(vertical: 32), child: EmptyState(
-              icon: Icons.event_busy_outlined,
-              title: 'No matches available',
-              text: 'No matches were returned for this date and filter. Try another day or pull down to refresh.',
-            ))
-          else
-            for (final group in groups.entries) ...[
-              Padding(padding: const EdgeInsets.only(bottom: 10, top: 6), child: Row(children: [
-                const Icon(Icons.emoji_events_outlined, size: 17, color: AppColors.accent),
-                const SizedBox(width: 8),
-                Expanded(child: Text(group.key.toUpperCase(), style: AppText.label)),
-                Text('${group.value.length}', style: AppText.caption),
-              ])),
-              for (final match in group.value) ...[
-                _fixtureCard(match),
-                const SizedBox(height: 9),
-              ],
-              const SizedBox(height: 10),
-            ],
-          const SizedBox(height: 8),
-          const Center(child: Text('Match information comes from your configured data provider.', textAlign: TextAlign.center, style: AppText.caption)),
-        ]);
-      },
-    ),
-  );
+              separatorBuilder: (_, __) => const SizedBox(width: 6),
+              itemBuilder: (_, i) => _leagueChip(leagues[i], active),
+            ),
+          ),
+        Expanded(
+          child: visible.isEmpty
+              ? const EmptyState(
+                  icon: Icons.event_busy_outlined,
+                  title: 'No matches',
+                  text: 'There are no sample fixtures on this day.',
+                )
+              : ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  children: children,
+                ),
+        ),
+      ],
+    );
+  }
 
-  Widget _fixtureCard(LiveFixture match) => Card(
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => MatchDetailScreen(fixture: match))),
-      child: Padding(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16), child: Row(children: [
-        SizedBox(width: 53, child: Column(children: [
-          Text(DateFormat('HH:mm').format(match.kickoff), style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w800, fontSize: 13)),
-          const SizedBox(height: 4),
-          Text(match.status.replaceAll('_', ' '), textAlign: TextAlign.center, style: const TextStyle(fontSize: 9, color: AppColors.textMuted)),
-        ])),
-        Container(height: 47, width: 1, margin: const EdgeInsets.symmetric(horizontal: 12), color: AppColors.border),
-        Expanded(child: Column(children: [
-          Row(children: [TeamBadge(name: match.home, size: 26), const SizedBox(width: 9), Expanded(child: Text(match.home, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.heading))]),
-          const SizedBox(height: 11),
-          Row(children: [TeamBadge(name: match.away, size: 26), const SizedBox(width: 9), Expanded(child: Text(match.away, maxLines: 1, overflow: TextOverflow.ellipsis, style: AppText.heading))]),
-        ])),
-        const Icon(Icons.chevron_right, color: AppColors.textFaint),
-      ])),
-    ),
-  );
+  Widget _dayChip(int i) {
+    final d = days[i];
+    final selected = i == dayIndex;
+    final isToday = isSameDay(d, today);
+    return GestureDetector(
+      onTap: () => setState(() => dayIndex = i),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        width: 52,
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accent : AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? AppColors.accent : AppColors.border,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              isToday ? 'Today' : DateFormat('EEE').format(d),
+              style: TextStyle(
+                fontSize: 10.5,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white70 : AppColors.textFaint,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              '${d.day}',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: selected ? Colors.white : AppColors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _leagueChip(String name, String active) {
+    final selected = name == active;
+    return GestureDetector(
+      onTap: () => setState(() => league = name),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.accentSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected ? AppColors.accent : AppColors.border,
+          ),
+        ),
+        child: Text(
+          name,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: selected ? AppColors.text : AppColors.textMuted,
+          ),
+        ),
+      ),
+    );
+  }
 }
