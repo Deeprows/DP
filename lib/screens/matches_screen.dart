@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/match.dart';
 import '../services/fixtures_service.dart';
+import '../services/prediction_service.dart';
 import '../theme.dart';
 import 'match_detail_screen.dart';
 
@@ -20,6 +21,123 @@ class _MatchesScreenState extends State<MatchesScreen> {
   String league = 'All';
   bool liveOnly = false;
   late Future<List<LiveFixture>> matchesFuture;
+  final Map<int, Future<Map<String, dynamic>>> _predictionRequests = {};
+
+  Future<void> _showPrediction(LiveFixture fixture) async {
+    if (fixture.id <= 0) return;
+    final request = _predictionRequests.putIfAbsent(
+      fixture.id,
+      () => PredictionService.predictionsForFixture(fixture.id),
+    );
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, 8, 20,
+              MediaQuery.viewInsetsOf(sheetContext).bottom + 24),
+          child: FutureBuilder<Map<String, dynamic>>(
+            future: request,
+            builder: (context, snapshot) {
+              final data = snapshot.data;
+              final prediction = _asMap(data?['prediction']);
+              final probs = _asMap(prediction['probabilities']);
+              final winner = _asMap(prediction['winner']);
+              final ready = data?['status']?.toString() == 'ok' &&
+                  prediction.isNotEmpty;
+              return SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('AI Match Analysis',
+                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+                    const SizedBox(height: 8),
+                    Text('${fixture.home} vs ${fixture.away}',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                    const SizedBox(height: 16),
+                    if (snapshot.connectionState != ConnectionState.done) ...[
+                      const LinearProgressIndicator(),
+                      const SizedBox(height: 12),
+                      const Text('Loading real statistical predictions…'),
+                    ] else if (snapshot.hasError) ...[
+                      Text(_errorText(snapshot.error),
+                          style: const TextStyle(color: AppColors.warning)),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.pop(sheetContext);
+                          _predictionRequests.remove(fixture.id);
+                          _showPrediction(fixture);
+                        },
+                        child: const Text('Try again'),
+                      ),
+                    ] else if (!ready)
+                      Text(_value(data?['message'],
+                          fallback: 'Prediction unavailable for this fixture.'),
+                          style: const TextStyle(color: AppColors.textMuted))
+                    else ...[
+                      const Text('MATCH OUTCOME PROBABILITIES',
+                          style: AppText.label),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(child: _predictionMetric('Home win', probs['home'])),
+                        Expanded(child: _predictionMetric('Draw', probs['draw'])),
+                        Expanded(child: _predictionMetric('Away win', probs['away'])),
+                      ]),
+                      const SizedBox(height: 16),
+                      Text(_value(prediction['advice'],
+                          fallback: 'No provider advice available.'),
+                          style: const TextStyle(fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 6),
+                      Text('Favored: ${_value(winner['name'], fallback: 'Not specified')}',
+                          style: const TextStyle(color: AppColors.textMuted)),
+                    ],
+                    const SizedBox(height: 18),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.pop(sheetContext);
+                        _openDetails(fixture);
+                      },
+                      icon: const Icon(Icons.open_in_new),
+                      label: const Text('Open full match centre'),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Provider statistics are estimates, not guaranteed results.',
+                        style: AppText.caption),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Map<String, dynamic> _asMap(dynamic value) => value is Map
+      ? value.map((key, value) => MapEntry(key.toString(), value))
+      : <String, dynamic>{};
+
+  static String _value(dynamic value, {String fallback = '—'}) {
+    final text = value?.toString().trim() ?? '';
+    return text.isEmpty || text == 'null' ? fallback : text;
+  }
+
+  static String _errorText(Object? error) =>
+      (error?.toString() ?? 'Prediction request failed.')
+          .replaceFirst('Bad state: ', '');
+
+  Widget _predictionMetric(String label, dynamic value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: AppText.caption),
+      const SizedBox(height: 4),
+      Text(_value(value),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+    ],
+  );
 
   @override
   void initState() {
@@ -278,28 +396,46 @@ class _MatchesScreenState extends State<MatchesScreen> {
                 : (m.statusLong.isEmpty ? m.status : m.statusLong);
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _openDetails(m),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          child: Row(children: [
-            SizedBox(
-              width: 55,
-              child: Text(status, textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
-                      color: m.isLive ? AppColors.accent : AppColors.textMuted)),
+      child: Column(
+        children: [
+          InkWell(
+            onTap: () => _openDetails(m),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              child: Row(children: [
+                SizedBox(
+                  width: 55,
+                  child: Text(status, textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700,
+                          color: m.isLive ? AppColors.accent : AppColors.textMuted)),
+                ),
+                Container(width: 1, height: 46, margin: const EdgeInsets.only(right: 12),
+                    color: AppColors.border),
+                Expanded(child: Column(children: [
+                  _teamRow(m.home, m.homeLogo, m.homeScore),
+                  const SizedBox(height: 8),
+                  _teamRow(m.away, m.awayLogo, m.awayScore),
+                ])),
+                const SizedBox(width: 4),
+                const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
+              ]),
             ),
-            Container(width: 1, height: 46, margin: const EdgeInsets.only(right: 12),
-                color: AppColors.border),
-            Expanded(child: Column(children: [
-              _teamRow(m.home, m.homeLogo, m.homeScore),
-              const SizedBox(height: 8),
-              _teamRow(m.away, m.awayLogo, m.awayScore),
-            ])),
-            const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, size: 18, color: AppColors.textMuted),
-          ]),
-        ),
+          ),
+          if (m.isUpcoming && m.id > 0) ...[
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => _showPrediction(m),
+                  icon: const Icon(Icons.auto_awesome, size: 17),
+                  label: const Text('AI Analyze'),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
