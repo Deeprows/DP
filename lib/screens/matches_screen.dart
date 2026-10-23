@@ -72,7 +72,7 @@ class _MatchesScreenState extends State<MatchesScreen> {
       fixture.awayScore,
     );
     Navigator.of(context).push(MaterialPageRoute<void>(
-      builder: (_) => MatchDetailScreen(match: match),
+      builder: (_) => MatchDetailScreen(match: match, fixture: fixture),
     ));
   }
 
