@@ -54,7 +54,7 @@ class PredictionService {
         },
         body: jsonEncode({'home': fixture.home, 'away': fixture.away}),
       ).timeout(const Duration(seconds: 45));
-      return _readResponse(response);
+      return await _readResponse(response);
     } on http.ClientException catch (error) {
       throw StateError('Unable to connect to the prediction server: $error');
     }
@@ -71,7 +71,7 @@ class PredictionService {
         _uri('/predictions?fixture=$fixtureId'),
         headers: {'Accept': 'application/json'},
       ).timeout(const Duration(seconds: 45));
-      return _readResponse(response);
+      return await _readResponse(response);
     } on http.ClientException catch (error) {
       throw StateError('Unable to connect to the prediction server: $error');
     }
