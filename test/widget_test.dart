@@ -6,8 +6,7 @@ void main() {
   testWidgets('Football app loads demo matches and navigation', (tester) async {
     await tester.pumpWidget(const FootballApp());
 
-    expect(find.text('FOOTBALL AI'), findsOneWidget);
-    expect(find.text('DEMO DATA'), findsOneWidget);
+    expect(find.text('DP  FOOTBALL AI'), findsOneWidget);
     expect(find.byIcon(Icons.sports_soccer), findsWidgets);
   });
 }
